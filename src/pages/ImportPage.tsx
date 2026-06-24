@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import type { ContactInsert, MessageInsert } from "@/types/database"
 import { useSettings } from "@/contexts/SettingsContext"
+import { analyzeContactWithClaude } from "@/lib/claude-api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -158,6 +159,7 @@ export default function ImportPage() {
   const [pasteText, setPasteText] = useState("")
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [useAIAnalysis, setUseAIAnalysis] = useState(false)
 
   // ── Parsing ────────────────────────────────────────────────────────
 
@@ -273,12 +275,39 @@ export default function ImportPage() {
         }
 
         const submissionDate = getValue(row, "submission_date") || null
+        const firstName = getValue(row, "first_name") || email.split("@")[0]
+        const lastName = getValue(row, "last_name") || ""
+        const company = getValue(row, "company_name") || ""
         const helpText = getValue(row, "how_can_we_help")
         const additionalInfo = getValue(row, "additional_info")
-        const type = helpText ? classifyType(helpText) : "Otro"
+
+        let type: "Productor" | "Distribuidor" | "Marca nueva" | "Consumidor" | "Otro" = "Otro"
+        let priority: "Alta" | "Media" | "Baja" = "Media"
         const bodyParts = [helpText, additionalInfo].filter(Boolean)
         const body = bodyParts.join("\n\n")
-        const priority = classifyPriority(type, body)
+
+        if (useAIAnalysis && settings?.llm_api_key) {
+          try {
+            const analysis = await analyzeContactWithClaude(
+              email,
+              firstName,
+              lastName,
+              company,
+              helpText,
+              additionalInfo,
+              settings.llm_api_key,
+            )
+            type = analysis.type
+            priority = analysis.priority
+          } catch (err) {
+            console.warn("Claude analysis failed, falling back to basic classification:", err)
+            type = helpText ? classifyType(helpText) : "Otro"
+            priority = classifyPriority(type, body)
+          }
+        } else {
+          type = helpText ? classifyType(helpText) : "Otro"
+          priority = classifyPriority(type, body)
+        }
 
         // Deduplication check
         let query = supabase
@@ -347,7 +376,7 @@ export default function ImportPage() {
     } finally {
       setImporting(false)
     }
-  }, [mapping, headers, rows, updateSettings])
+  }, [mapping, headers, rows, updateSettings, useAIAnalysis, settings])
 
   const handleReset = useCallback(() => {
     setStep("input")
@@ -357,6 +386,7 @@ export default function ImportPage() {
     setResult(null)
     setError(null)
     setPasteText("")
+    setUseAIAnalysis(false)
   }, [])
 
   // ── Render ─────────────────────────────────────────────────────────
@@ -468,6 +498,27 @@ export default function ImportPage() {
             {error}
           </div>
         )}
+
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="flex items-center gap-3 pt-6">
+            <input
+              type="checkbox"
+              id="useAI"
+              checked={useAIAnalysis}
+              onChange={(e) => setUseAIAnalysis(e.target.checked)}
+              disabled={!settings?.llm_api_key}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="useAI" className="flex-1 cursor-pointer">
+              Usar análisis con IA para clasificar contactos
+              {!settings?.llm_api_key && (
+                <span className="ml-2 text-xs text-gray-600">
+                  (Requiere Claude API key en Ajustes)
+                </span>
+              )}
+            </Label>
+          </CardContent>
+        </Card>
 
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleReset}>
