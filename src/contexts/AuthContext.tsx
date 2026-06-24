@@ -18,9 +18,7 @@ export function useAuth(): AuthContextValue {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    () => sessionStorage.getItem("authenticated") === "true",
-  )
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true)
 
   const login = useCallback(async (password: string): Promise<boolean> => {
     const { data, error } = await supabase
