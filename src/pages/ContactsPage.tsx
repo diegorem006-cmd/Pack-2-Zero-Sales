@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Users, Clock, CheckCircle2, Inbox } from "lucide-react"
+import { Search, Users, Clock, CheckCircle2, Inbox, MessageCircle } from "lucide-react"
 
 const PRIORITY_ORDER: Record<Contact["priority"], number> = { Alta: 0, Media: 1, Baja: 2 }
 const STATUS_ORDER: Record<Contact["status"], number> = { Nuevo: 0, Pendiente: 1, Contestado: 2 }
@@ -23,7 +23,7 @@ export default function ContactsPage() {
   const navigate = useNavigate()
   const { teamMembers } = useSettings()
 
-  const [contacts, setContacts] = useState<(Contact & { first_message?: string; member_name?: string })[]>([])
+  const [contacts, setContacts] = useState<(Contact & { first_message?: string; member_name?: string; message_count?: number; last_message_date?: string })[]>([])
   const [counts, setCounts] = useState({ nuevo: 0, pendiente: 0, contestado: 0, total: 0 })
   const [loading, setLoading] = useState(true)
 
@@ -46,20 +46,25 @@ export default function ContactsPage() {
         return
       }
 
-      // Fetch first message for each contact
+      // Fetch messages for each contact
       const contactIds = contactsData.map((c) => c.id)
       const { data: messagesData } = await supabase
         .from("messages")
-        .select("contact_id, body")
+        .select("contact_id, body, created_at")
         .in("contact_id", contactIds)
         .order("created_at", { ascending: true })
 
       const firstMessageMap = new Map<string, string>()
+      const messageCountMap = new Map<string, number>()
+      const lastMessageDateMap = new Map<string, string>()
+
       if (messagesData) {
         for (const msg of messagesData) {
           if (!firstMessageMap.has(msg.contact_id)) {
             firstMessageMap.set(msg.contact_id, msg.body)
           }
+          messageCountMap.set(msg.contact_id, (messageCountMap.get(msg.contact_id) ?? 0) + 1)
+          lastMessageDateMap.set(msg.contact_id, msg.created_at)
         }
       }
 
@@ -73,6 +78,8 @@ export default function ContactsPage() {
         ...c,
         first_message: firstMessageMap.get(c.id),
         member_name: c.assigned_to ? memberMap.get(c.assigned_to) : undefined,
+        message_count: messageCountMap.get(c.id) ?? 0,
+        last_message_date: lastMessageDateMap.get(c.id),
       }))
 
       setContacts(enriched)
@@ -241,7 +248,7 @@ export default function ContactsPage() {
               className="cursor-pointer hover:bg-accent/50 transition-colors"
               onClick={() => navigate(`/contacts/${contact.id}`)}
             >
-              <CardContent className="py-4 px-5 flex flex-col sm:flex-row sm:items-center gap-3">
+              <CardContent className="py-4 px-5 flex flex-col sm:flex-row sm:items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm truncate">
@@ -250,23 +257,40 @@ export default function ContactsPage() {
                     <StatusDot status={contact.status} />
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
-                    {contact.first_name} {contact.last_name || ""}
+                    {contact.first_name} {contact.last_name || ""} • {contact.email}
                   </p>
                   {contact.first_message && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate max-w-[500px]">
+                    <p className="text-xs text-muted-foreground mt-1 truncate max-w-full">
                       {contact.first_message.length > 80
                         ? contact.first_message.slice(0, 80) + "..."
                         : contact.first_message}
                     </p>
                   )}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="h-3 w-3" />
+                      {contact.message_count ?? 0} mensaje{(contact.message_count ?? 0) !== 1 ? "s" : ""}
+                    </span>
+                    {contact.last_message_date && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatDate(contact.last_message_date)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-start sm:justify-end">
                   <Badge variant={contact.priority.toLowerCase() as "alta" | "media" | "baja"}>
                     {contact.priority}
                   </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {contact.type}
+                  </Badge>
                   {contact.country && (
-                    <span className="text-xs text-muted-foreground">{contact.country}</span>
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-gray-100 rounded">
+                      {contact.country}
+                    </span>
                   )}
                   <span className="text-xs text-muted-foreground">
                     {contact.member_name || "Sin asignar"}
@@ -293,4 +317,18 @@ function StatusDot({ status }: { status: Contact["status"] }) {
       title={status}
     />
   )
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 60) return `hace ${diffMins}m`
+  if (diffHours < 24) return `hace ${diffHours}h`
+  if (diffDays < 7) return `hace ${diffDays}d`
+  return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" })
 }
