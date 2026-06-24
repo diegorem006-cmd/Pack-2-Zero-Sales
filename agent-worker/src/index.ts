@@ -122,10 +122,6 @@ export default {
     }
   },
 
-  async scheduled(event: ScheduledEvent, env: Env): Promise<void> {
-    console.log("Agent analysis triggered");
-    await analyzeData(env);
-  },
 } satisfies ExportedHandler<Env>;
 
 async function addLog(log: LogEntry, env: Env): Promise<void> {
