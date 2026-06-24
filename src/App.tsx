@@ -13,6 +13,9 @@ export default function App() {
     <AuthProvider>
       <SettingsProvider>
         <Routes>
+          {/* Redirect login to contacts */}
+          <Route path="/login" element={<Navigate to="/contacts" replace />} />
+
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/contacts" replace />} />
             <Route path="import" element={<ImportPage />} />
