@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom"
-import { Inbox, Upload, Settings } from "lucide-react"
+import { Inbox, Upload, Settings, Image } from "lucide-react"
 import { useSettings } from "@/contexts/SettingsContext"
 
 const navItems = [
   { to: "/contacts", label: "Bandeja", icon: Inbox },
-  { to: "/import", label: "Importar", icon: Upload },
+  { to: "/import", label: "Importar Excel", icon: Upload },
+  { to: "/import-image", label: "Importar Imagen", icon: Image },
   { to: "/settings", label: "Ajustes", icon: Settings },
 ] as const
 
