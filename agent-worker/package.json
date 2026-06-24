@@ -1,0 +1,17 @@
+{
+  "name": "pack-2-cero-agent",
+  "version": "1.0.0",
+  "description": "Autonomous AI Agent for Pack-2-Cero-Sales",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240725.0",
+    "typescript": "^5.3.3"
+  }
+}
