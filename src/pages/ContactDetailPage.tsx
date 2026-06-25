@@ -25,7 +25,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { ArrowLeft, Send, Sparkles, MessageSquarePlus } from "lucide-react"
+import { ArrowLeft, Send, Sparkles, MessageSquarePlus, Building2, Zap } from "lucide-react"
+import { researchCompanyWithClaude } from "@/lib/claude-api"
 
 const CONTACT_TYPES = ["Productor", "Distribuidor", "Marca nueva", "Consumidor", "Otro"] as const
 const PRIORITIES = ["Alta", "Media", "Baja"] as const
@@ -42,6 +43,8 @@ export default function ContactDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [companyInfo, setCompanyInfo] = useState<any>(null)
+  const [researchingCompany, setResearchingCompany] = useState(false)
 
   // Editable form state
   const [form, setForm] = useState({
@@ -93,6 +96,22 @@ export default function ContactDetailPage() {
           status: c.status,
           assigned_to: c.assigned_to || "",
         })
+
+        // Investigate company if provided
+        if (c.company_name) {
+          const { settings } = useSettings()
+          if (settings?.llm_api_key) {
+            setResearchingCompany(true)
+            try {
+              const research = await researchCompanyWithClaude(c.company_name, c.email, settings.llm_api_key)
+              setCompanyInfo(research)
+            } catch (err) {
+              console.warn("Company research failed:", err)
+            } finally {
+              setResearchingCompany(false)
+            }
+          }
+        }
       }
       if (messagesRes.data) setMessages(messagesRes.data)
       setLoading(false)
@@ -210,6 +229,54 @@ export default function ContactDetailPage() {
         <ArrowLeft className="h-4 w-4 mr-2" />
         Volver a contactos
       </Button>
+
+      {/* Company Research Card */}
+      {contact?.company_name && (
+        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-blue-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-base">Investigación de Empresa</CardTitle>
+              {researchingCompany && <span className="text-xs text-blue-600 ml-auto">Investigando...</span>}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {companyInfo ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Industria</p>
+                  <p className="text-sm font-semibold text-blue-900">{companyInfo.industry}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Tamaño</p>
+                  <p className="text-sm font-semibold text-blue-900">{companyInfo.size}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-xs font-medium text-muted-foreground">Descripción</p>
+                  <p className="text-sm text-blue-900">{companyInfo.description}</p>
+                </div>
+                {companyInfo.keyInsights?.length > 0 && (
+                  <div className="col-span-2 md:col-span-4 pt-2 border-t border-blue-200">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Insights clave</p>
+                    <ul className="text-sm space-y-1">
+                      {companyInfo.keyInsights.slice(0, 3).map((insight: string, i: number) => (
+                        <li key={i} className="flex gap-2">
+                          <Zap className="h-3 w-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-blue-900">{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : researchingCompany ? (
+              <p className="text-sm text-muted-foreground">Investigando información de {contact.company_name}...</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No se pudo obtener información adicional</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: contact info */}

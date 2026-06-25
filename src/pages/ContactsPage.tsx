@@ -25,6 +25,7 @@ export default function ContactsPage() {
 
   const [contacts, setContacts] = useState<(Contact & { first_message?: string; member_name?: string; message_count?: number; last_message_date?: string })[]>([])
   const [counts, setCounts] = useState({ nuevo: 0, pendiente: 0, contestado: 0, total: 0 })
+  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
   // Filters
@@ -83,6 +84,14 @@ export default function ContactsPage() {
       }))
 
       setContacts(enriched)
+
+      // Calculate type counts
+      const types: Record<string, number> = {}
+      for (const c of contactsData) {
+        types[c.type] = (types[c.type] ?? 0) + 1
+      }
+      setTypeCounts(types)
+
       setCounts({
         nuevo: contactsData.filter((c) => c.status === "Nuevo").length,
         pendiente: contactsData.filter((c) => c.status === "Pendiente").length,
@@ -177,6 +186,25 @@ export default function ContactsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Type breakdown */}
+      {Object.keys(typeCounts).length > 0 && (
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50">
+          <CardHeader>
+            <CardTitle className="text-sm">Distribución por tipo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {Object.entries(typeCounts).map(([type, count]) => (
+                <div key={type} className="text-center p-2 rounded-lg bg-white border border-purple-100">
+                  <div className="text-xs font-medium text-muted-foreground truncate">{type}</div>
+                  <div className="text-lg font-bold text-purple-600">{count}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-3 items-center">
