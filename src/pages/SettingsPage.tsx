@@ -30,6 +30,12 @@ import {
   Upload,
 } from "lucide-react"
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message
+  if (typeof err === "string") return err
+  return "Ocurrio un error desconocido al guardar."
+}
+
 export default function SettingsPage() {
   const { settings, updateSettings, teamMembers, addTeamMember, removeTeamMember, loading } =
     useSettings()
@@ -114,8 +120,8 @@ export default function SettingsPage() {
         company_description: companyDescription,
       })
       toast({ title: "Marca actualizada", description: "Los cambios se guardaron correctamente." })
-    } catch {
-      toast({ title: "Error", description: "No se pudieron guardar los cambios.", variant: "destructive" })
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" })
     } finally {
       setSavingBranding(false)
     }
@@ -131,8 +137,8 @@ export default function SettingsPage() {
         resend_api_key: resendApiKey || null,
       })
       toast({ title: "Correo actualizado", description: "Los cambios se guardaron correctamente." })
-    } catch {
-      toast({ title: "Error", description: "No se pudieron guardar los cambios.", variant: "destructive" })
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" })
     } finally {
       setSavingEmail(false)
     }
@@ -147,8 +153,8 @@ export default function SettingsPage() {
         llm_api_key: llmApiKey || null,
       })
       toast({ title: "IA actualizada", description: "Los cambios se guardaron correctamente." })
-    } catch {
-      toast({ title: "Error", description: "No se pudieron guardar los cambios.", variant: "destructive" })
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" })
     } finally {
       setSavingAi(false)
     }
@@ -163,8 +169,8 @@ export default function SettingsPage() {
       setNewMemberName("")
       setNewMemberEmail("")
       toast({ title: "Miembro agregado", description: "El miembro del equipo fue agregado." })
-    } catch {
-      toast({ title: "Error", description: "No se pudo agregar el miembro.", variant: "destructive" })
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" })
     } finally {
       setAddingMember(false)
     }
@@ -174,8 +180,8 @@ export default function SettingsPage() {
     try {
       await removeTeamMember(id)
       toast({ title: "Miembro eliminado", description: "El miembro fue removido del equipo." })
-    } catch {
-      toast({ title: "Error", description: "No se pudo eliminar el miembro.", variant: "destructive" })
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" })
     }
   }
 
@@ -200,8 +206,8 @@ export default function SettingsPage() {
       setNewPassword("")
       setConfirmPassword("")
       toast({ title: "Contrasena actualizada", description: "La contrasena de acceso fue cambiada." })
-    } catch {
-      toast({ title: "Error", description: "No se pudo cambiar la contrasena.", variant: "destructive" })
+    } catch (err) {
+      toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" })
     } finally {
       setSavingSecurity(false)
     }
