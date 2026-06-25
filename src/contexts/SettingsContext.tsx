@@ -62,16 +62,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       .select()
       .single()
 
-    if (!error && data) {
+    if (error) throw new Error(error.message)
+    if (data) {
       setTeamMembers((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
     }
   }, [])
 
   const removeTeamMember = useCallback(async (id: string) => {
     const { error } = await supabase.from("team_members").delete().eq("id", id)
-    if (!error) {
-      setTeamMembers((prev) => prev.filter((m) => m.id !== id))
-    }
+    if (error) throw new Error(error.message)
+    setTeamMembers((prev) => prev.filter((m) => m.id !== id))
   }, [])
 
   return (
