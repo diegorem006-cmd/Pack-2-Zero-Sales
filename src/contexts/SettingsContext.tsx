@@ -42,7 +42,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = useCallback(
     async (updates: SettingsUpdate) => {
-      if (!settings) return
+      if (!settings) throw new Error("Configuracion no cargada")
       const { data, error } = await supabase
         .from("settings")
         .update(updates)
@@ -50,7 +50,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         .select()
         .single()
 
-      if (!error && data) setSettings(data)
+      if (error) throw new Error(error.message)
+      if (data) setSettings(data)
     },
     [settings],
   )
